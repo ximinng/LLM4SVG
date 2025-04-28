@@ -1,0 +1,48 @@
+# Configuration for LLM4SVG-GPT2 Training
+method: 'LLM4SVG-GPT2'
+data_preprocess: true
+
+# Model Config
+# 'openai-community/gpt2': the smallest version of GPT-2, with 124M parameters
+# 'openai-community/gpt2-medium': GPT-2 Medium is the 355M parameter
+# 'openai-community/gpt2-large': GPT-2 Large is the 774M parameter
+# 'openai-community/gpt2-xl': GPT-2 XL is the 1.5B parameter
+model_name: 'openai-community/gpt2-xl'
+local_file: false # Whether to download the model
+train_scratch: false
+
+# Tokenizer Config
+tokenizer_name: '${x.model_name}'
+save_tokenizer: true
+seq_len: 1024
+use_svg_token: '${data.syntactic_encode}' # Whether to use specific SVG tokenization (depends on data config)
+semantic_init_svg_token: true # Consider setting to true if `use_svg_token` adds new tokens and you have descriptions
+num_token: false # Consider exploring `true` if standard number tokenization affects coordinate precision
+
+# Accelerator Config
+mixed_precision: 'fp16'
+gradient_accumulation_steps: 8
+with_tracking: true
+report_to: 'tensorboard'
+project_name: '${x.method}-tracker'
+
+# Train Config
+num_train_epochs: 1000
+train_batch_size: 2
+lr: 2e-5
+weight_decay: 0 # 1e-2 ~ 1e-3
+lr_scheduler: 'constant_with_warmup'
+warmup_steps: 200
+ignore_prompt_loss: true # Set to true for SFT (ignore prompt)
+grad_max_norm: 2
+eval_steps: 2000
+eval_sample: 5
+resume_step: 0 # Set > 0 if resuming from a specific step count.
+resume_from_checkpoint: "" # Path to checkpoint directory if resuming.
+
+# EMA Config
+use_ema: false
+ema_decay: 0.9999
+ema_update_after_step: 100
+ema_update_every: 10
+ema_eval_use_ema_weights: true

@@ -1,0 +1,40 @@
+#-----------------#
+#  Global Config  #
+#-----------------#
+
+# Base directory for all outputs generated during runs (logs, checkpoints, samples, etc.).
+project_dir: './workspace'
+
+# --- Logging Configuration ---
+logging:
+  level: INFO                   # Logging level (e.g., DEBUG, INFO, WARNING, ERROR). Controls verbosity.
+  log_all_ranks_console: false  # If true, console output from all distributed processes is shown. If false, only the main process logs to console.
+  log_file_basename: 'LLM4SVG_training_run' # Base name for the log file created in the output directory (e.g., 'LLM4SVG_training_run.log').
+  log_interval: 200             # Frequency (in training steps) for logging metrics like loss and learning rate. Set to 0 or -1 to disable step-based logging.
+
+# --- Reproducibility Settings ---
+seed: 951222                   # Global random seed for libraries like random, numpy, torch to ensure reproducibility.
+device_specific: False         # If true, the seed for each process in distributed training will be slightly offset (seed + process_index). Useful if strict identical initialization across devices isn't required.
+deterministic: False           # If true, forces PyTorch to use deterministic algorithms where available. This can aid reproducibility but might negatively impact performance.
+
+# --- Hydra Settings ---
+hydra:
+  help:
+    app_name: 'LLM4SVG-pytorch' # Name displayed in the help message.
+
+  # Configuration for Hydra's output directory structure.
+  run:
+    # Defines the output directory pattern for each run.
+    # Variables:
+    #   ${project_dir}: Value defined above.
+    #   ${x.method}: Value of 'method' from the 'x' (experiment) config group.
+    #   ${now:%Y-%m-%d-%H-%M}: Current timestamp.
+    # Example output: ./workspace/LLM4SVG-GPT2-2025-04-27-22-56/
+    dir: ${project_dir}/${x.method}-${now:%Y-%m-%d-%H-%M}
+
+# --- Configuration Composition ---
+defaults:
+  - _self_
+  - x: ~
+  - data: data                  # Loads the dataset configuration from 'data.yaml'.
+  - override hydra/job_logging: disabled # Disables Hydra's default job logging to avoid duplicate logging handlers.

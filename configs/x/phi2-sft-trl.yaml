@@ -1,0 +1,37 @@
+# Configuration for LLM4SVG-Phi2 Training
+method: 'LLM4SVG-Phi2'
+data_preprocess: true
+
+# Model Config
+model_name: 'microsoft/phi-2'
+local_file: false # Whether to download the model
+train_scratch: false
+
+# Tokenizer Config
+tokenizer_name: '${x.model_name}'
+save_tokenizer: true
+seq_len: 2048
+use_svg_token: '${data.syntactic_encode}' # Whether to use specific SVG tokenization (depends on data config)
+semantic_init_svg_token: true # Consider setting to true if `use_svg_token` adds new tokens and you have descriptions
+
+# Train Config
+use_bf16: true
+use_fp16: false
+gradient_accumulation_steps: 2
+report_to: 'tensorboard'
+num_train_epochs: 200
+train_batch_size: 1
+lr: 2e-5
+optim: 'adamw_torch'
+weight_decay: 0.001
+lr_scheduler: 'cosine'
+warmup_steps: 100
+grad_max_norm: 2
+logging_steps: 100
+save_steps: 500
+eval_steps: 500
+eval_sample: 5
+resume_from_checkpoint: "" # Path to checkpoint directory if resuming
+
+# Inference
+inference: false

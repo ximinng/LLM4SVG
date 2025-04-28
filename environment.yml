@@ -1,0 +1,33 @@
+name: llm4svg
+channels:
+  - conda-forge
+  - nvidia
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - scikit-learn
+  - torchvision
+  - torchaudio
+  - tqdm
+  - requests
+  - pip:
+      - torch==2.6.0+cu124
+      - accelerate
+      - datasets
+      - trl
+      - huggingface-hub
+      - modelscope
+      - einops
+      - safetensors
+      - hydra
+      - omegaconf
+      - lxml
+      - tensorboard
+      - cairosvg
+      - unsloth

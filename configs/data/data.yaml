@@ -1,0 +1,50 @@
+##########################
+#     Dataset Config     #
+##########################
+
+# Optional: Set environment variable to force using local datasets/cache if available
+# export HF_DATASETS_OFFLINE=1
+
+# --- Hugging Face Hub Settings ---
+HG_auth_token: '' # Your Hugging Face User Access Token (required for private datasets/models)
+
+# --- Dataset Identification & Loading ---
+dataset: "xingxm/SVGX-Core-250k" # Hugging Face Dataset Hub ID (e.g., 'username/dataset_name') or path to a local dataset directory.
+split: 'train'                   # The specific dataset split to load initially (e.g., 'train', 'test', 'validation').
+cache_dir: "~/.cache/huggingface/datasets/SVGX-Core-250k" # Directory to cache downloaded raw dataset files. Defaults typically to ~/.cache/huggingface/datasets.
+load_from_disk: 'dataset/SVGX-dataset/SVGX-Core-250k' # If a path is provided (e.g., '/path/to/saved_dataset'), load the raw dataset directly from this local directory instead of downloading.
+load_from_cache_file: false      # Whether to use cached results of dataset processing steps (like .map()). Set to false to force re-processing.
+
+# --- Preprocessing Cache/Storage ---
+preprocessed_disk: null          # Path to save the fully preprocessed dataset (after all .map() operations) to disk, or load from if it exists. Speeds up subsequent runs.
+# tokenized_cache_dir: null      # Path to potentially save/load a *tokenized* version of the dataset. (Consider if this stage is needed separately from preprocessed_disk).
+
+# --- Column Management ---
+target_columns: [ 'name', 'blip_caption', 'svg_code' , 'svg_path', 'image' ] # List of columns required from the raw dataset *before* any preprocessing or removal. Add 'image' if needed.
+unused_columns: [ 'source' ]      # List of column names to be removed from the dataset *if* remove_columns is true.
+remove_columns: true              # If true, columns listed in `unused_columns` will be removed. Set to false to keep all original columns (might increase memory usage).
+text_prompt: [ 'name', 'blip_caption' ] # Columns from `target_columns` to concatenate (space-separated) to create the final text prompt for the model.
+
+# --- Parallel Processing ---
+num_workers: 128                 # Number of CPU cores to use for parallel data processing operations (e.g., .map()). Adjust based on your system.
+
+# --- Evaluation Set Creation ---
+# Defines how the evaluation/validation dataset is created:
+for_recon: true                  # If true: Eval set is created for *reconstruction* tasks. `eval_dataset` will be a direct subset (first N samples) of the processed `train_dataset`.
+# If false: Eval set is created via a train/test split of the processed dataset.
+eval_size: 50                    # - If for_recon=true: Must be an integer (e.g., 100). Specifies the *number* of samples from the start of the training set to use for evaluation.
+# - If for_recon=false: Can be an integer (number of samples) or a float (fraction, e.g., 0.1 for 10%). Specifies the size of the test split.
+
+# --- SVG Preprocessing Options ---
+# These options modify the 'svg_code' column during the preprocessing map function.
+simplify_grad_tag: true          # If true, attempts to replace <linearGradient>/<radialGradient> tags with a single average color based on their stops. Simplifies color representation.
+# How to handle elements with missing 'fill' attributes after potential gradient simplification:
+fill_is_empty: 'skip'            # - 'previous': Inherit fill color from the last preceding element that had a valid fill.
+# - 'skip': Leave the fill attribute missing or empty. (Current Setting)
+# - 'default': Set fill to a default value (e.g., '#ffffff').
+remove_svg: false                # If true, removes the outermost <svg>...</svg> tags, keeping only the inner elements. May be needed if the model expects only content fragments.
+flatten_g: false                 # If true, removes <g> tags and attempts to apply their attributes (like transforms, fill) directly to their child elements.
+syntactic_encode: true           # If true, converts the processed SVG string into a custom sequence of semantic tokens (e.g., '[<|svg_path|>] [<|d|>] [<|moveto|>] ...').
+
+# --- Debugging ---
+debug_data: false                # If true, the preprocessing step will add extra columns to the dataset (e.g., 'svg_raw', 'struct_svg') to help debug the SVG processing logic.

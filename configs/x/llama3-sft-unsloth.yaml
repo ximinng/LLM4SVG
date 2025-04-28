@@ -1,0 +1,46 @@
+method: 'LLM4SVG-Llama3-unsloth'
+data_preprocess: true
+
+# Tokenizer Config
+model_name: 'unsloth/Llama-3.2-3B-Instruct-bnb-4bit'
+save_tokenizer: true
+use_svg_token: '${data.syntactic_encode}' # Whether to use specific SVG tokenization (depends on data config)
+semantic_init_svg_token: true
+seq_len: 4096
+instruction_base: "Generate an SVG illustration from the given description."
+
+# Train Config
+lora_target_modules: [ "q_proj", "k_proj", "v_proj", "o_proj","gate_proj", "up_proj", "down_proj" ]
+lora_rank: 64
+lora_alpha: 128
+lora_dropout: 0
+ft_lm_head: ${x.use_svg_token}
+ft_embed_tokens: ${x.use_svg_token}
+peft_bias: 'none'
+use_gradient_checkpointing: 'unsloth' # True or "unsloth" for very long context
+train_on_responses_only: false
+num_train_epochs: 10
+train_batch_size: 32
+eval_batch_size: 1
+gradient_accumulation_steps: 8
+lr: 1e-4
+embedding_learning_rate: 5e-5 # 2-10x smaller than learning_rate
+weight_decay: 0 # 0.0001
+lr_scheduler: 'constant_with_warmup'
+warmup_steps: 200
+grad_max_norm: 2
+save_steps: 1000
+log_steps: 10
+resume_from_checkpoint: false
+resume_dir: ~
+with_tracking: null # ['all', 'aim', 'tensorboard', 'wandb', 'comet_ml', 'mlflow', 'clearml', 'dvclive']
+save_merged_model: false
+run_inference_after_train: true
+
+# Generation Config
+generation:
+  max_new_tokens: 2048
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.9
+  top_k: 50
