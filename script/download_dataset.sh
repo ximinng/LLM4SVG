@@ -27,4 +27,4 @@ for repo in "${!datasets[@]}"; do
   echo "✅ Successfully downloaded '$repo'."
 done
 
-echo "🎉 All datasets have been downloaded successfully!"
+echo "✅ All datasets have been downloaded successfully!"

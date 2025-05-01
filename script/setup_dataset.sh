@@ -12,18 +12,12 @@ if [ ! -d "$RENDERING_DATA_DIR" ]; then
 fi
 
 # Step 2: Run the data processing Python script
-echo "🚀 Running data processing script to export images..."
+echo "Running data processing script to export images..."
 python SVGX-dataset/export_imgs.py --dataset_path dataset/SVGX-dataset/SVGX-Core-250k --output_file dataset/SVGX-rendering-data/ -a svg_to_png
 
 echo "✅ Data processing completed."
 
-# Step 3: Run the data processing Python script
-echo "🚀 Running data processing script to export images..."
-python SVGX-dataset/export_imgs.py --dataset_path dataset/SVGX-dataset/SVGX-Core-250k --output_file dataset/SVGX-rendering-data/ -a svg_to_png
-
-echo "✅ Data processing completed."
-
-# Step 4: Continue with dataset symbolic link setup
+# Step 3: Continue with dataset symbolic link setup
 # Define dataset and rendering data paths
 DATASET_DIR="./dataset/SVGX-dataset"
 DATASET_LINK="./LLaMA-Factory/data/SVGX-dataset"
@@ -65,4 +59,4 @@ create_symlink "$DATASET_DIR" "$DATASET_LINK" "../../dataset/SVGX-dataset"
 # Create symbolic link for SVGX-rendering-data
 create_symlink "$RENDERING_DATA_DIR" "$RENDERING_LINK" "../../dataset/SVGX-rendering-data"
 
-echo "🎉 All setup completed successfully!"
+echo "✅ All setup completed successfully!"
