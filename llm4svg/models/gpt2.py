@@ -99,7 +99,8 @@ def generate_svg(
         do_sample: bool = True,
         temperature: float = 1.0,
         top_k: int = 50,
-        top_p: float = 0.95
+        top_p: float = 0.95,
+        post_processing: bool = true,
 ) -> List[str]:
     """Generates SVG text sequence from a prompt using the provided model."""
 
@@ -111,6 +112,23 @@ def generate_svg(
     input_ids = eval_input['input_ids'].to(device)
     attention_mask = eval_input.get('attention_mask', torch.ones_like(input_ids)).to(device)
 
+    # Find the token ID for '</svg>'
+    # Assuming '</svg>' is a single token in the SVGTokenizer's vocabulary
+    svg_end_token = '</svg>'
+    svg_end_token_id = tokenizer.convert_tokens_to_ids(svg_end_token)
+
+    if svg_end_token_id is None or svg_end_token_id == tokenizer.unk_token_id:
+        # If '</svg>' is not a recognized token
+        print(f"[Warning] Token '{svg_end_token}' not found in tokenizer vocabulary. "
+              f"Generation will not stop explicitly on this token. "
+              f"UNK ID: {tokenizer.unk_token_id}, SVG_END ID: {svg_end_token_id}")
+        # Use the default EOS token for the model if available
+        stop_token_id = model.config.eos_token_id if model.config.eos_token_id is not None else pad_token_id
+    else:
+        # Use the found ID as the stopping criterion
+        stop_token_id = svg_end_token_id
+        print(f"Set stop token ID for generation to '{svg_end_token}' (ID: {stop_token_id})")
+
     output = model.generate(
         input_ids,
         attention_mask=attention_mask,
@@ -119,7 +137,8 @@ def generate_svg(
         do_sample=do_sample,
         temperature=temperature,
         top_k=top_k,
-        top_p=top_p
+        top_p=top_p,
+        eos_token_id=stop_token_id,
     )
 
     # Decode generated sequences
@@ -127,6 +146,19 @@ def generate_svg(
         tokenizer.decode(o, skip_special_tokens=False, clean_up_tokenization_spaces=False)
         for o in output
     ]
+
+    if post_processing:
+        # Trim the text after the first occurrence of '</svg>' if it wasn't the actual stop token
+        trimmed_texts = []
+        for text in generated_texts:
+            svg_end_index = text.find(svg_end_token)
+            if svg_end_index != -1:
+                # Include the '</svg>' token itself
+                trimmed_texts.append(text[:svg_end_index + len(svg_end_token)])
+            else:
+                trimmed_texts.append(text)  # No '</svg>' found, return the full generated text
+
+        return trimmed_texts
 
     return generated_texts
 
