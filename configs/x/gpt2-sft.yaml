@@ -7,7 +7,7 @@ data_preprocess: true
 # 'openai-community/gpt2-medium': GPT-2 Medium is the 355M parameter
 # 'openai-community/gpt2-large': GPT-2 Large is the 774M parameter
 # 'openai-community/gpt2-xl': GPT-2 XL is the 1.5B parameter
-model_name: 'openai-community/gpt2-xl'
+model_name: 'openai-community/gpt2'
 local_file: false # Whether to download the model
 train_scratch: false
 
@@ -20,7 +20,7 @@ semantic_init_svg_token: true # Consider setting to true if `use_svg_token` adds
 num_token: false # Consider exploring `true` if standard number tokenization affects coordinate precision
 
 # Accelerator Config
-mixed_precision: 'fp16'
+mixed_precision: "no" # use for 'fp16' CUDA supported devices
 gradient_accumulation_steps: 8
 with_tracking: true
 report_to: 'tensorboard'

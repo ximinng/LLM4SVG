@@ -35,6 +35,6 @@ hydra:
 # --- Configuration Composition ---
 defaults:
   - _self_
-  - x: ~
+  - x: "gpt2-sft"
   - data: data                  # Loads the dataset configuration from 'data.yaml'.
   - override hydra/job_logging: disabled # Disables Hydra's default job logging to avoid duplicate logging handlers.

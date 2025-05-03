@@ -197,5 +197,6 @@ lightning_logs/*
 /data/test*/
 /data_process/
 /data_process/*
+/dataset/preprocessed_data
 _RecordBook.md
 _CodeChanges.md

@@ -16,7 +16,7 @@ load_from_disk: 'dataset/SVGX-dataset/SVGX-Core-250k' # If a path is provided (e
 load_from_cache_file: false      # Whether to use cached results of dataset processing steps (like .map()). Set to false to force re-processing.
 
 # --- Preprocessing Cache/Storage ---
-preprocessed_disk: null          # Path to save the fully preprocessed dataset (after all .map() operations) to disk, or load from if it exists. Speeds up subsequent runs.
+preprocessed_disk: "${hydra.run.dir}/dataset/preprocessed_data/"  # Path to save the fully preprocessed dataset (after all .map() operations) to disk, or load from if it exists. Speeds up subsequent runs.
 # tokenized_cache_dir: null      # Path to potentially save/load a *tokenized* version of the dataset. (Consider if this stage is needed separately from preprocessed_disk).
 
 # --- Column Management ---
@@ -26,7 +26,7 @@ remove_columns: true              # If true, columns listed in `unused_columns` 
 text_prompt: [ 'name', 'blip_caption' ] # Columns from `target_columns` to concatenate (space-separated) to create the final text prompt for the model.
 
 # --- Parallel Processing ---
-num_workers: 128                 # Number of CPU cores to use for parallel data processing operations (e.g., .map()). Adjust based on your system.
+num_workers: 10                 # Number of CPU cores to use for parallel data processing operations (e.g., .map()). Adjust based on your system.
 
 # --- Evaluation Set Creation ---
 # Defines how the evaluation/validation dataset is created:
