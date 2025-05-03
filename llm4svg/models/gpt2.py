@@ -66,18 +66,18 @@ def init_token_embedding(
             for i, token in enumerate(reversed(new_tokens), start=1):
                 if "[" or "]" in token:
                     token = token.replace("[", "").replace("]", "")
-
                 if token == NUM_TOKEN:
                     desc = "number, the value of the coordinate"
                     logger.info(f"Using description for NUM_TOKEN: '{desc}'")
                 else:
-                    desc = TokenDescMapper[token]
-                    if desc is None:
+                    if token not in TokenDescMapper.keys():
                         logger.info(
                             f"[Warning] No description found in TokenDescMapper for new token: '{token}'."
                             f" Skipping initialization."
                         )
                         continue
+                    else:
+                        desc = TokenDescMapper[token]
 
                 # Tokenize description
                 tokenized = svg_tokenizer.tokenize(desc)
@@ -104,7 +104,6 @@ def init_token_embedding(
                 model.transformer.wte.weight[-i, :] = (
                     description_embeddings.clone().detach()
                 )
-
     # model.tokenizer = svg_tokenizer
     return model
 
