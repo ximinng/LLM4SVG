@@ -14,6 +14,7 @@ split: 'train'                   # The specific dataset split to load initially 
 cache_dir: "~/.cache/huggingface/datasets/SVGX-Core-250k" # Directory to cache downloaded raw dataset files. Defaults typically to ~/.cache/huggingface/datasets.
 load_from_disk: 'dataset/SVGX-dataset/SVGX-Core-250k' # If a path is provided (e.g., '/path/to/saved_dataset'), load the raw dataset directly from this local directory instead of downloading.
 load_from_cache_file: false      # Whether to use cached results of dataset processing steps (like .map()). Set to false to force re-processing.
+reduced_dataset: true         # If true, reduces the dataset to a smaller size for faster testing. Useful for debugging or quick iterations.
 
 # --- Preprocessing Cache/Storage ---
 preprocessed_disk: "${hydra:runtime.cwd}/dataset/preprocessed/"  # Path to save the fully preprocessed dataset (after all .map() operations) to disk, or load from if it exists. Speeds up subsequent runs.

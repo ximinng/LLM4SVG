@@ -7,6 +7,7 @@
 import copy
 import logging
 import random
+from functools import partial
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -195,6 +196,36 @@ def generate_svg(
         return trimmed_texts
 
     return generated_texts
+
+
+def collate_fn(
+    batch: List[Dict[str, List[int]]], pad_token_id: int
+) -> Dict[str, torch.Tensor]:
+    """Pads sequences dynamically within a batch."""
+    input_ids = [torch.LongTensor(example["input_ids"]) for example in batch]
+    labels = [torch.LongTensor(example["labels"]) for example in batch]
+    # Pad sequences to the maxlength in this batch
+    input_ids_padded = pad_sequence(
+        input_ids, batch_first=True, padding_value=pad_token_id
+    )
+    labels_padded = pad_sequence(
+        labels, batch_first=True, padding_value=-100
+    )  # Use -100 for label padding
+
+    collated_batch = {"input_ids": input_ids_padded, "labels": labels_padded}
+    # Handle attention mask if present
+    if (
+        "attention_mask" in batch[0]
+    ):  # Check if attention_mask exists in the tokenized output
+        attention_masks = [
+            torch.LongTensor(example["attention_mask"]) for example in batch
+        ]
+        attention_mask_padded = pad_sequence(
+            attention_masks, batch_first=True, padding_value=0
+        )  # Pad attention mask with 0
+        collated_batch["attention_mask"] = attention_mask_padded
+
+    return collated_batch
 
 
 def llm4svg_gpt2_sft(
@@ -429,40 +460,13 @@ def llm4svg_gpt2_sft(
             )  # Print truncated
             logger.info(f"--- End Sample {index} ---\n")
 
-    def collate_fn(batch: List[Dict[str, List[int]]]) -> Dict[str, torch.Tensor]:
-        """Pads sequences dynamically within a batch."""
-        input_ids = [torch.LongTensor(example["input_ids"]) for example in batch]
-        labels = [torch.LongTensor(example["labels"]) for example in batch]
-        # Pad sequences to the maxlength in this batch
-        input_ids_padded = pad_sequence(
-            input_ids, batch_first=True, padding_value=pad_token_id
-        )
-        labels_padded = pad_sequence(
-            labels, batch_first=True, padding_value=-100
-        )  # Use -100 for label padding
-
-        collated_batch = {"input_ids": input_ids_padded, "labels": labels_padded}
-        # Handle attention mask if present
-        if (
-            "attention_mask" in batch[0]
-        ):  # Check if attention_mask exists in the tokenized output
-            attention_masks = [
-                torch.LongTensor(example["attention_mask"]) for example in batch
-            ]
-            attention_mask_padded = pad_sequence(
-                attention_masks, batch_first=True, padding_value=0
-            )  # Pad attention mask with 0
-            collated_batch["attention_mask"] = attention_mask_padded
-
-        return collated_batch
-
     # DataLoaders Creation
     logger.info("Creating DataLoader...")
     train_dataloader = DataLoader(
         tokenized_datasets,
         shuffle=True,
         batch_size=xcfg.train_batch_size,
-        collate_fn=collate_fn,
+        collate_fn=partial(collate_fn, pad_token_id=pad_token_id),
         num_workers=data_cfg.num_workers,
     )
 
@@ -521,7 +525,7 @@ def llm4svg_gpt2_sft(
     # Initialize Trackers
     if xcfg.with_tracking and accelerator.is_main_process:
         tracker_config = omegaconf.OmegaConf.to_container(
-            cfg, resolve=True, throw_on_missing=True
+            xcfg, resolve=True, throw_on_missing=True
         )
         accelerator.init_trackers(project_name=xcfg.project_name, config=tracker_config)
         logger.info("Initialized trackers.")

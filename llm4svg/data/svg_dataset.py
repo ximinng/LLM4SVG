@@ -27,6 +27,8 @@ def get_svg_dataset(
 ) -> Tuple[Union[Dataset, DatasetDict], Union[Dataset, DatasetDict]]:
     if path_exists(cfg.preprocessed_disk):
         processed_dataset = load_from_disk(cfg.preprocessed_disk)
+        if cfg.reduced_dataset:
+            processed_dataset = processed_dataset.select(range(100))
     else:
         disable_caching()
 
