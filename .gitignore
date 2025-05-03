@@ -195,8 +195,9 @@ lightning_logs/*
 # ignore files
 /data/*
 /data/test*/
+/dataset/preprocessed
 /data_process/
 /data_process/*
-/dataset/preprocessed_data
+/dataset/preprocessed
 _RecordBook.md
 _CodeChanges.md

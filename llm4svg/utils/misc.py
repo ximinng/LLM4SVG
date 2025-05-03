@@ -4,17 +4,19 @@
 # License: MIT License
 # Description: Helper Functions
 
-from typing import Callable
+import os
 from pathlib import Path
+from typing import Callable
 
+import omegaconf
 from torch import is_tensor
 from torch.utils._pytree import tree_map
 
-
 # helper functions
 
+
 def path_exists(p):
-    if p is not None and p != '' and Path(p).exists():
+    if p is not None and p != "" and Path(p).exists():
         return True
     return False
 
@@ -39,7 +41,7 @@ def prepend(arr, el):
     arr.insert(0, el)
 
 
-def join(arr, delimiter=''):
+def join(arr, delimiter=""):
     return delimiter.join(arr)
 
 
@@ -88,9 +90,9 @@ def write_lines_to_file(file_path, sentences):
         file_path (str): Path to the text file to write.
         sentences (list): List of sentences (strings) to write.
     """
-    with open(file_path, 'w', encoding='utf-8') as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         for sentence in sentences:
-            f.write(sentence + '\n')
+            f.write(sentence + "\n")
 
 
 def read_lines_from_file(file_path):
@@ -103,7 +105,7 @@ def read_lines_from_file(file_path):
     Returns:
         list: A list of sentences (strings), one sentence per line.
     """
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         sentences = f.readlines()
 
     # Strip any trailing newline characters

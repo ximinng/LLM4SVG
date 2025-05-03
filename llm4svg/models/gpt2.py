@@ -64,6 +64,9 @@ def init_token_embedding(
 
         with torch.no_grad():
             for i, token in enumerate(reversed(new_tokens), start=1):
+                if "[" or "]" in token:
+                    token = token.replace("[", "").replace("]", "")
+
                 if token == NUM_TOKEN:
                     desc = "number, the value of the coordinate"
                     logger.info(f"Using description for NUM_TOKEN: '{desc}'")
@@ -221,10 +224,11 @@ def llm4svg_gpt2_sft(
         )
 
     # Ensure PAD token is set (GPT-2 often doesn't have one by default)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    # Line crashes for SVGTokenzier, in this case, the pad_token is accessed from the underlying tokenizer
+    if tokenizer.tokenizer.pad_token is None:
+        tokenizer.tokenizer.pad_token = tokenizer.tokenizer.eos_token
         logger.info(
-            f"Set PAD token to EOS token: {tokenizer.eos_token} (ID: {tokenizer.eos_token_id})"
+            f"Set PAD token to EOS token: {tokenizer.tokenizer.eos_token} (ID: {tokenizer.eos_token_id})"
         )
     pad_token_id = tokenizer.pad_token_id
 
