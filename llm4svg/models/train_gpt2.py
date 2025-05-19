@@ -10,23 +10,16 @@ from pathlib import Path
 import random
 from typing import List, Dict, Any, Optional
 
+from accelerate import Accelerator
+from datasets import Dataset as HFDataset
 import omegaconf
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
-from datasets import Dataset as HFDataset
 from tqdm.auto import tqdm
-from accelerate import Accelerator
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    AutoConfig,
-    get_scheduler,
-    GPT2LMHeadModel,
-    PreTrainedTokenizer,
-    PreTrainedTokenizerFast,
-)
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, get_scheduler, GPT2LMHeadModel, \
+    PreTrainedTokenizer, PreTrainedTokenizerFast
 
 from llm4svg.utils import model_size, create_adam_optimizer, compute_train_schedule, path_exists, EMA
 from llm4svg.data import SVGTokenizer, NUM_TOKEN, TokenDescMapper
@@ -100,7 +93,7 @@ def generate_svg(
         temperature: float = 1.0,
         top_k: int = 50,
         top_p: float = 0.95,
-        post_processing: bool = true,
+        post_processing: bool = True,
 ) -> List[str]:
     """Generates SVG text sequence from a prompt using the provided model."""
 
