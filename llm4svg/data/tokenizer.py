@@ -6,18 +6,18 @@
 
 import re
 from functools import partial
-import logging  # Use standard logging for warnings/errors
-from typing import List, Dict, Any, Optional, Union, Tuple  # Added more types
+import logging
+from typing import List, Dict, Any, Optional, Union, Tuple
 
 import omegaconf
-from transformers import AutoTokenizer, PreTrainedTokenizerBase  # Import base class
+from transformers import AutoTokenizer, PreTrainedTokenizerBase
 import torch
 
 from .semantic_tokens import SVGToken, AttribMapper, ContainerMapper, GradientsMapper, PathCMDMapper, PathMapper, \
     ShapeMapper, syntactic2svg
 from .token_config import SEMANTIC_SVG_TOKEN_MAPPER_DEFAULT as TokenDescMapper
 
-logger = logging.getLogger(__name__)  # Use standard logger for internal messages
+logger = logging.getLogger(__name__)
 
 ALLMapper = {
     **PathMapper, **PathCMDMapper, **ShapeMapper, **ContainerMapper, **GradientsMapper, **AttribMapper
@@ -114,6 +114,9 @@ class SVGTokenizer:
 
         # Add special tokens dictionary
         special_tokens_dict = {'additional_special_tokens': special_tokens_to_add}
+
+        print_fn(special_tokens_dict)
+
         num_added_special_tokens = base_tokenizer.add_special_tokens(special_tokens_dict)
         if num_added_special_tokens > 0:
             self.print_fn(f"Added {num_added_special_tokens} new special tokens: {special_tokens_to_add}")
