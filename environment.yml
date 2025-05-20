@@ -1,8 +1,8 @@
 name: llm4svg
 channels:
-  - conda-forge
-  - nvidia
   - pytorch
+  - nvidia
+  - conda-forge
   - defaults
 dependencies:
   - python=3.10
@@ -12,12 +12,15 @@ dependencies:
   - scipy
   - matplotlib
   - scikit-learn
+  - pytorch=2.6.0
   - torchvision
   - torchaudio
+  # Specify your desired CUDA toolkit version.
+  # CUDA 12.4 is common.
+  - pytorch-cuda=12.4
   - tqdm
   - requests
   - pip:
-      - torch==2.6.0+cu124
       - accelerate
       - datasets
       - trl
