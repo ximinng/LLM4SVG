@@ -10,13 +10,14 @@ import random
 import math
 from typing import Optional
 
+USE_UNSLOTH = True
 try:
     from unsloth import UnslothTrainingArguments, UnslothTrainer, FastLanguageModel, apply_chat_template, \
         is_bfloat16_supported
     from unsloth.chat_templates import train_on_responses_only
 
 except ImportError:
-    raise ImportError("Unsloth is not installed or available. This script requires Unsloth.")
+    USE_UNSLOTH = False
 
 from accelerate import Accelerator
 import omegaconf
@@ -173,6 +174,9 @@ def llama3_sft_by_unsloth(
         logger: logging.Logger
 ):
     xcfg, data_cfg = cfg.x, cfg.data  # Method and dataset config
+
+    if not USE_UNSLOTH:
+        raise ImportError("Unsloth is not installed or available. This script requires Unsloth.")
 
     # Model and Tokenizer Loading
     # 4bit pre quantized models we support for 4x faster downloading + no OOMs.
