@@ -21,7 +21,7 @@ from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, get_scheduler, GPT2LMHeadModel, \
     PreTrainedTokenizer, PreTrainedTokenizerFast
 
-from llm4svg.utils import model_size, create_adam_optimizer, compute_train_schedule, path_exists, EMA
+from llm4svg.utils import model_size, create_adam_optimizer, compute_train_schedule, path_exists, EMA, prepend
 from llm4svg.data import SVGTokenizer, NUM_TOKEN, TokenDescMapper
 from llm4svg.svglib import save_svg_text
 
@@ -51,11 +51,9 @@ def init_token_embedding(
                     desc = 'number, the value of the coordinate'
                     logger.info(f"Using description for NUM_TOKEN: '{desc}'")
                 else:
-                    desc = TokenDescMapper[token]
+                    desc = TokenDescMapper.get(token)
                     if desc is None:
-                        logger.info(
-                            f"[Warning] No description found in TokenDescMapper for new token: '{token}'."
-                            f" Skipping initialization.")
+                        print(f"[Warning] Token '{token}' not found in TokenDescMapper. Skipping.")
                         continue
 
                 # Tokenize description
@@ -97,7 +95,7 @@ def generate_svg(
 ) -> List[str]:
     """Generates SVG text sequence from a prompt using the provided model."""
 
-    model.eval()  # Ensure model is in eval mode
+    model.eval()
 
     # Tokenize prompt
     eval_input = tokenizer(prompt, return_tensors="pt", padding=False, truncation=True)
@@ -177,10 +175,8 @@ def llm4svg_gpt2_sft(
     else:
         tokenizer = AutoTokenizer.from_pretrained(xcfg.model_name, local_files_only=xcfg.local_file)
 
-    # Ensure PAD token is set (GPT-2 often doesn't have one by default)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        logger.info(f"Set PAD token to EOS token: {tokenizer.eos_token} (ID: {tokenizer.eos_token_id})")
+    # Ensure PAD token is set
+    logger.info(f"PAD token ID: {tokenizer.pad_token_id}")
     pad_token_id = tokenizer.pad_token_id
 
     if xcfg.save_tokenizer and accelerator.is_main_process:
@@ -501,8 +497,10 @@ def llm4svg_gpt2_sft(
                 current_lr = optimizer.param_groups[0]['lr']
 
                 progress_bar.set_description(
-                    f"Epoch {epoch + 1}/{num_train_epochs} | Step {step + 1}/{len(train_dataloader)} | "
-                    f"LR: {current_lr:.1e} | Loss: {avg_loss:.4f}"
+                    f"Epoch {epoch + 1}/{num_train_epochs} | "
+                    f"Step {step + 1}/{len(train_dataloader)} | "
+                    f"LR: {current_lr:.1e} | "
+                    f"Loss: {avg_loss:.4f}"
                 )
 
                 if xcfg.with_tracking:
@@ -540,8 +538,11 @@ def llm4svg_gpt2_sft(
                         state_dir.mkdir(parents=True, exist_ok=True)
                         sample_dir.mkdir(parents=True, exist_ok=True)
 
+                        # Save Model
                         accelerator.save_state(state_dir.as_posix())
                         logger.info(f"Saved accelerator state to {state_dir}")
+                        # Save Tokenizer
+                        tokenizer.save_pretrained(state_dir.as_posix())
 
                         # Generate Samples
                         unwrapped_model = accelerator.unwrap_model(model)

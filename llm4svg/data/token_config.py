@@ -39,7 +39,7 @@ SEMANTIC_SVG_TOKEN_MAPPER_DEFAULT = {
     "[<|close_the_path|>]": "Close path",
 
     # Attribute Tokens
-    "[<|id|>]": "Element identifier",
+    "[<|tag_id|>]": "Element identifier",
     "[<|path_d|>]": "Path data",
     "[<|fill|>]": "Fill color",
     "[<|stroke-width|>]": "Stroke width",
