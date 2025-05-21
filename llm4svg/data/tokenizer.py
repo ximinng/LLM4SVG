@@ -114,9 +114,6 @@ class SVGTokenizer:
 
         # Add special tokens dictionary
         special_tokens_dict = {'additional_special_tokens': special_tokens_to_add}
-
-        print_fn(special_tokens_dict)
-
         num_added_special_tokens = base_tokenizer.add_special_tokens(special_tokens_dict)
         if num_added_special_tokens > 0:
             self.print_fn(f"Added {num_added_special_tokens} new special tokens: {special_tokens_to_add}")
@@ -127,8 +124,8 @@ class SVGTokenizer:
         try:
             self._newly_added_tokens = sorted(list(base_tokenizer.get_added_vocab().keys()))
         except AttributeError:
-            logger.warning(
-                "Cannot get exact list of newly added tokens (requires transformers >= 4.3). Relying on initial check.")
+            logger.warning("Cannot get exact list of newly added tokens (requires transformers >= 4.3). "
+                           "Relying on initial check.")
             # Fallback based on initial check (less accurate if base tokenizer already had some)
             _new_non_special = set(tokens_to_add) - set(base_tokenizer.vocab.keys())
             _new_special = set(special_tokens_to_add) - set(base_tokenizer.get_vocab(with_added_tokens=False).keys())
@@ -152,7 +149,8 @@ class SVGTokenizer:
                 if num_added > 0: self._newly_added_tokens.append('[PAD]')
         elif base_tokenizer.pad_token is None:
             logger.warning(
-                f"pad_token_type '{pad_token_type}' not recognized or base tokenizer has no default pad token. Adding default [PAD].")
+                f"pad_token_type '{pad_token_type}' not recognized or base tokenizer has no default pad token. "
+                f"Adding default [PAD].")
             num_added = base_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
             if num_added > 0: self._newly_added_tokens.append('[PAD]')
 
@@ -165,6 +163,7 @@ class SVGTokenizer:
         self.max_length = cfg.seq_len
         self.pad_token_id = self.tokenizer.pad_token_id
         self.eos_token_id = self.tokenizer.eos_token_id
+        self.unk_token_id = self.tokenizer.unk_token_id
         self.padding_side = self.tokenizer.padding_side
         self.ignore_id = IGNORE_INDEX  # Use constant
 
@@ -245,8 +244,7 @@ class SVGTokenizer:
     def get_vision_end_id(self) -> Optional[int]:
         return self._get_token_id_safe(IMG_END_TOKEN)
 
-    # Specialized Tokenization (Use with Caution)
-
+    # Specialized Tokenization
     def tokenize_with_num(
             self,
             text: str,
@@ -483,7 +481,6 @@ class SVGTokenizer:
         """Applies the chat template defined in the underlying tokenizer."""
         if not hasattr(self.tokenizer, 'apply_chat_template'):
             logger.error("The underlying tokenizer does not support apply_chat_template.")
-            # Fallback or raise error
             raise NotImplementedError("apply_chat_template not available.")
         return self.tokenizer.apply_chat_template(*args, **kwargs)
 
@@ -511,7 +508,6 @@ class SVGTokenizer:
 
     def __len__(self) -> int:
         """Returns the current vocabulary size."""
-        # The vocab size is fixed after __init__, no need to recalculate
         return self.vocab_size
 
     def save_pretrained(self, save_directory: str, **kwargs):

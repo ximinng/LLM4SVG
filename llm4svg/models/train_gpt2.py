@@ -22,7 +22,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, get_sc
     PreTrainedTokenizer, PreTrainedTokenizerFast
 
 from llm4svg.utils import model_size, create_adam_optimizer, compute_train_schedule, path_exists, EMA, prepend
-from llm4svg.data import SVGTokenizer, NUM_TOKEN, TokenDescMapper
+from llm4svg.data import SVGTokenizer, NUM_TOKEN, TokenDescMapper, SVGToken
 from llm4svg.svglib import save_svg_text
 
 
@@ -61,7 +61,7 @@ def init_token_embedding(
                 tokenized_ids = svg_tokenizer.tokens2ids(tokenized)
 
                 # Filter out unknown tokens if any resulted from tokenization
-                valid_ids = [id_ for id_ in tokenized_ids if id_ < origin_vocab_size]  # Only use original vocab IDs
+                valid_ids = [id_ for id_ in tokenized_ids if id_ < origin_vocab_size]
                 if not valid_ids:
                     logger.info(
                         f"[Warning] Description for token '{token}' tokenized to empty or all-new/unknown IDs. "
@@ -81,6 +81,7 @@ def init_token_embedding(
 
 @torch.no_grad()
 def generate_svg(
+        use_svg_token: bool,
         prompt: str,
         model: torch.nn.Module,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | SVGTokenizer,
@@ -99,26 +100,47 @@ def generate_svg(
 
     # Tokenize prompt
     eval_input = tokenizer(prompt, return_tensors="pt", padding=False, truncation=True)
-
     input_ids = eval_input['input_ids'].to(device)
     attention_mask = eval_input.get('attention_mask', torch.ones_like(input_ids)).to(device)
 
-    # Find the token ID for '</svg>'
-    # Assuming '</svg>' is a single token in the SVGTokenizer's vocabulary
-    svg_end_token = '</svg>'
-    svg_end_token_id = tokenizer.convert_tokens_to_ids(svg_end_token)
+    # Determine the SVG end token string for post-processing
+    # and for attempting to find a single EOS ID for generation.
+    svg_end_string_for_post_processing: str
+    eos_token_id_for_generate: Optional[int] = None
 
-    if svg_end_token_id is None or svg_end_token_id == tokenizer.unk_token_id:
-        # If '</svg>' is not a recognized token
-        print(f"[Warning] Token '{svg_end_token}' not found in tokenizer vocabulary. "
-              f"Generation will not stop explicitly on this token. "
-              f"UNK ID: {tokenizer.unk_token_id}, SVG_END ID: {svg_end_token_id}")
-        # Use the default EOS token for the model if available
-        stop_token_id = model.config.eos_token_id if model.config.eos_token_id is not None else pad_token_id
+    if use_svg_token:
+        svg_end_string_for_post_processing = SVGToken['end']
+        # Attempt to get the ID for SVGToken['end'], which is expected to be a single token
+        try:
+            # `convert_tokens_to_ids` is standard for Hugging Face tokenizers.
+            # SVGTokenizer's `tokens2ids` eventually calls this or similar on its internal tokenizer.
+            token_id_val = tokenizer.tokens2ids(svg_end_string_for_post_processing)
+
+            if isinstance(token_id_val, int) and \
+                    (not hasattr(tokenizer, 'unk_token_id') or token_id_val != tokenizer.unk_token_id):
+                eos_token_id_for_generate = token_id_val
+                print(
+                    f"Generation will use specific EOS token: '{svg_end_string_for_post_processing}' (ID: {eos_token_id_for_generate})")
+            else:
+                print(
+                    f"[Warning] Expected single token '{svg_end_string_for_post_processing}' did not resolve to a valid single token ID (got {token_id_val}). Defaulting EOS for generation.")
+        except Exception as e:
+            print(
+                f"[Warning] Error trying to get ID for '{svg_end_string_for_post_processing}': {e}. Defaulting EOS for generation.")
     else:
-        # Use the found ID as the stopping criterion
-        stop_token_id = svg_end_token_id
-        print(f"Set stop token ID for generation to '{svg_end_token}' (ID: {stop_token_id})")
+        svg_end_string_for_post_processing = '</svg>'
+        # For '</svg>' with a standard tokenizer, it's multiple tokens.
+        # So, we don't set a specific eos_token_id_for_generate based on it.
+        # Generation will rely on model's default EOS or max_length.
+        print(
+            f"Generation will use model's default EOS. Post-processing will look for string: '{svg_end_string_for_post_processing}'.")
+
+    # If no specific EOS token was found, use model's default or pad_token_id
+    if eos_token_id_for_generate is None:
+        eos_token_id_for_generate = model.config.eos_token_id
+        if eos_token_id_for_generate is None:
+            eos_token_id_for_generate = pad_token_id  # Fallback
+        print(f"Using default EOS token (ID: {eos_token_id_for_generate}) for model.generate()")
 
     output = model.generate(
         input_ids,
@@ -129,26 +151,27 @@ def generate_svg(
         temperature=temperature,
         top_k=top_k,
         top_p=top_p,
-        eos_token_id=stop_token_id,
+        eos_token_id=eos_token_id_for_generate,
     )
 
-    # Decode generated sequences
+    # Decode only the newly generated part of the sequences
+    generated_sequences = output[:, input_ids.shape[1]:]
     generated_texts = [
         tokenizer.decode(o, skip_special_tokens=False, clean_up_tokenization_spaces=False)
-        for o in output
+        for o in generated_sequences
     ]
 
     if post_processing:
-        # Trim the text after the first occurrence of '</svg>' if it wasn't the actual stop token
         trimmed_texts = []
         for text in generated_texts:
-            svg_end_index = text.find(svg_end_token)
+            # Use the correct string marker for trimming
+            svg_end_index = text.find(svg_end_string_for_post_processing)
             if svg_end_index != -1:
-                # Include the '</svg>' token itself
-                trimmed_texts.append(text[:svg_end_index + len(svg_end_token)])
+                trimmed_texts.append(text[:svg_end_index + len(svg_end_string_for_post_processing)])
             else:
-                trimmed_texts.append(text)  # No '</svg>' found, return the full generated text
-
+                # If the specific end marker wasn't found, but generation stopped (e.g. by model's true EOS or max_length)
+                # we might still have a valid (though perhaps incomplete) SVG.
+                trimmed_texts.append(text)
         return trimmed_texts
 
     return generated_texts
@@ -407,8 +430,8 @@ def llm4svg_gpt2_sft(
         num_warmup_steps=xcfg.warmup_steps * accelerator.num_processes,  # Scale warmup steps
         num_training_steps=max_train_steps
     )
-    logger.info(
-        f"Scheduler: {xcfg.lr_scheduler}, Warmup Steps: {xcfg.warmup_steps}, Total Steps: {max_train_steps}")
+    logger.info(f"Scheduler: {xcfg.lr_scheduler}, Warmup Steps: {xcfg.warmup_steps}, "
+                f"Total Steps: {max_train_steps}")
 
     logger.info("Preparing model, optimizer, dataloader, scheduler with Accelerator...")
     model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
@@ -426,8 +449,8 @@ def llm4svg_gpt2_sft(
             if use_ema and ema_instance:
                 logger.info(f"EMA state loaded. EMA current step: {ema_instance.num_updates}")
         else:
-            logger.info(
-                f"[Warning] Checkpoint path specified but not found or not a directory: {checkpoint_path}. Starting from scratch.")
+            logger.info(f"[Warning] Checkpoint path specified but not found or not a directory: {checkpoint_path}. "
+                        f"Starting from scratch.")
             # Reset schedule vars if checkpoint load failed but was expected
             completed_steps, starting_epoch = 0, 0
 
@@ -462,10 +485,11 @@ def llm4svg_gpt2_sft(
                         desc="Training Progress")
 
     for epoch in range(starting_epoch, num_train_epochs):
-        model.train()
         total_loss_accumulated = 0.0  # reset loss accumulator for the epoch
 
         for step, batch in enumerate(train_dataloader):
+            model.train()
+
             # Gradient Accumulation Context
             with accelerator.accumulate(model):
                 outputs = model(**batch)
@@ -578,13 +602,14 @@ def llm4svg_gpt2_sft(
                             prompt = f"{random_example['text_prompt']}. output:"
 
                             # Get generation parameters from config or use defaults
-                            gen_max_length = xcfg.get("gen_max_length", xcfg.seq_len)  # Default to context window size
+                            gen_max_length = xcfg.get("gen_max_length", xcfg.seq_len)
                             gen_temp = xcfg.get("gen_temp", 1.0)
                             gen_top_k = xcfg.get("gen_top_k", 50)
                             gen_top_p = xcfg.get("gen_top_p", 0.95)
                             gen_do_sample = xcfg.get("gen_do_sample", True)
 
                             generated_texts = generate_svg(
+                                xcfg.use_svg_token,
                                 prompt=prompt,
                                 model=eval_model,
                                 tokenizer=tokenizer,
@@ -608,7 +633,6 @@ def llm4svg_gpt2_sft(
                         # End main process block for eval/save
 
                     accelerator.wait_for_everyone()
-                    model.train()
                     logger.info(f"Step {completed_steps}: Evaluation and saving complete.")
                     # End Evaluation and Checkpointing
 
