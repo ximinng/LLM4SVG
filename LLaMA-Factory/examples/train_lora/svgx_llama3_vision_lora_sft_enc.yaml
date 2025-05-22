@@ -38,6 +38,7 @@ ddp_timeout: 180000000
 ### new tokens
 new_special_tokens_config: data/SVGX-dataset/svg_tokens.yaml
 init_special_tokens: semantic_init
+skip_special_tokens: False
 
 ### generation
 max_length: 4096
